@@ -14,10 +14,6 @@ $DIR/tools/printstrings --input=$DIR/data/ptb/ptb-dev.input.fsts/25.fst -m $DIR/
 fstcompile --isymbols=$DIR/data/chars.syms --osymbols=$DIR/data/chars.syms \
 --keep_isymbols --keep_osymbols $DIR/common/toUpper.txt > toUpper.fst
 
-#verify that the upper casing transducer does the right thing, for example :
-printstrings --input=$DIR/data/ptb/ptb-dev.input.fsts/21.fst -m $DIR/data/chars.syms
-fstcompose $DIR/data/ptb/ptb-dev.input.fsts/21.fst toUpper.fst |\
-printstrings -p -m $DIR//data/chars.syms -n 5
 
 #draw
 file=toUpper
