@@ -151,19 +151,53 @@ done
 #testing c2w and unk
 fstunion he.c2w.fst unk.fst heunk.fst
 
+#4.6  Word-level Language Models
+#We generate the training data for the word-based LM by replacing punctuation symbols in the training text with whitespace:
+sed -f $DIR/scripts/puncstrip.sed $DIR/data/train/train.words > lm.word.train.txt
+awk 'NR==4' $DIR/data/train/train.words
+awk 'NR==4' lm.word.train.txt
+
+#A  word-based  unigram  LM  is  built  
+$DIR/tools/kenlm/bin/lmplz -o 1 <lm.word.train.txt > lm.word.1.arpa
+LD_LIBRARY_PATH=$DIR/tools/kaldi/tools/openfst/lib/ \
+$DIR/tools/kaldi/src/lmbin/arpa2fst \
+--read-symbol-table=$DIR/data/words.syms lm.word.1.arpa lm.word.1.fst
+
+#4.7  Applying the Word-based Language Model
+fstcompose cseq2wseq/21.fst lm.word.1.fst | printstrings -w -m $DIR/data/chars.syms -n 5 -u
+fstcompose cseq2wseq/21.fst lm.word.1.fst |\
+printstrings -w -m $DIR/data/words.syms -n 5 -u -p
+
+#Batch processing of the dev set follows the procedure for the character-based LM:
+mkdir -p hyps.lm.words.1
+for id in `seq 1 1700`; do
+fstcompose cseq2wseq/$id.fst lm.word.1.fst | fstshortestpath > hyps.lm.words.1/$id.fst
+done
+# Generate and score the mixed-case character sequences
+printstrings --range=1:1700 --input=hyps.lm.words.1/?.fst -m $DIR/data/chars.syms \
+--output=hyps.lm.words.1/rawhyps
+sed 's,<s>,,;s,</s>,,'   hyps.lm.words.1/rawhyps > hyps.lm.words.1/chyps
+python $DIR/scripts/eval_recasing.py --test hyps.lm.words.1/chyps \
+--ref $DIR/data/ptb/ptb-dev.chars
+
+# Generate and score the mixed-case word sequences
+sed 's, ,,g;s,_, ,g'  hyps.lm.words.1/chyps > hyps.lm.words.1/whyps
+python $DIR/scripts/eval_recasing.py --test hyps.lm.words.1/whyps \
+--ref $DIR/data/ptb/ptb-dev.words
+
 #testinput
 file=in
 fstcompile --isymbols=$DIR/data/chars.syms --osymbols=$DIR/data/chars.syms  --acceptor  $file.txt $file.fst
 file2=heunk
-fstcompose  ${file}.fst ${file2}.fst  ou.fst
-file3=ou
+file3=heheunk
+fstcompose  ${file}.fst ${file2}.fst  ${file3}.fst
 fstarcsort ${file3}.fst ${file3}2.fst
 fstproject --project_output ${file3}2.fst ${file3}o.fst
 printstrings -m $DIR/data/words.syms  -n 5 -u -p < ${file3}o.fst
 
 
 #draw toUpper lm.char.2 21ToUpperLMTrunc 21ToUpperTrunc 21output2wseq
-for file in  ou
+for file in  heheunk
 do
 #fstcompile --isymbols=$DIR/data/chars.syms --osymbols=$DIR/data/words.syms  ${file}.txt ${file}.fst
 fstdraw --isymbols=$DIR/data/chars.syms --osymbols=$DIR/data/words.syms  ${file}.fst  ${file}.dot
