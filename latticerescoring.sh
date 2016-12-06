@@ -25,16 +25,33 @@ fstrmepsilon | fstdeterminize | fstminimize | fstarcsort > lats.lm.word.1/$id.fs
 done
 
 #5.2.1  Constrained Mapping from Word Lattices Back to Character Sequences
-fstcompose cseq2wseq/21.fst lats.lm.word.1/21.fst |\
+fstcompose lats.lm.char.2/21.fst cseq2wseq/21.fst  |\
 printstrings -w -m $DIR/data/chars.syms  -n 5 -u
+#<s> W e ' r e _ a b o u t _ t o _ s e e _ i f _ a d v e r t i s i n g _ w o r k s . </s> 101.67
+#<s> W e ' r e _ a b o u t _ t o _ S e e _ i f _ a d v e r t i s i n g _ w o r k s . </s> 102.991
+#<s> W e ' r e _ a b o u t _ t o _ s e e _ I f _ a d v e r t i s i n g _ w o r k s . </s> 102.995
+#<s> W e ' r e _ a b o u t _ t o _ S e e _ I f _ a d v e r t i s i n g _ w o r k s . </s> 104.316
+#<s> W e ' r e _ a b o u t _ t o _ s e e _ i f _ a d v e r t i s i n g _ W o r k s . </s> 104.586
+
+fstcompose lats.lm.char.2/21.fst cseq2wseq/21.fst  hyps.lats.lm.words.1/21.fst
+fstcompose  hyps.lats.lm.words.1/21.fst lats.lm.word.1/21.fst |\
+printstrings -w -m $DIR/data/words.syms  -n 5 -u -p
+#<s> We re about to see if advertising works </s> 	162.458
+#<s> We re about to see If advertising works </s> 	164.532
+#<s> We re about to See if advertising works </s> 	167.652
+#<s> We re about to see if Advertising works </s> 	167.716
+#<s> We re about to see if advertising Works </s> 	168.146
 
 #################################################################################
-#Unigram sequences for evaluation
+#2-char 1-word evaluation
 #################################################################################
 #Batch processing of the dev set follows the procedure for the character-based LM:
 mkdir -p hyps.lats.lm.words.1
+mkdir -p hyps.lats.lm.charwords.1
 for id in `seq 1 1700`; do
-fstcompose cseq2wseq/$id.fst lats.lm.word.1/$id.fst | fstshortestpath > hyps.lats.lm.words.1/$id.fst
+#fstcompose cseq2wseq/$id.fst lats.lm.word.1/$id.fst | fstshortestpath > hyps.lats.lm.words.1/$id.fst
+fstcompose lats.lm.char.2/$id.fst cseq2wseq/$id.fst > hyps.lats.lm.charwords.1/$id.fst
+fstcompose hyps.lats.lm.charwords.1/$id.fst lats.lm.word.1/$id.fst  > hyps.lats.lm.words.1/$id.fst
 done
 
 # Generate and score the mixed-case character sequences
@@ -82,12 +99,13 @@ printstrings -w -m $DIR/data/words.syms  -n 5 -u -p
 #<s> we Re about to see if advertising works </s> 	66.4805
 
 #################################################################################
-#Evaluation of 2-gram word model
+#Evaluation of 2-gram char 2-gram word model - Interpolation
 #################################################################################
 #Batch processing of the dev set follows the procedure for the character-based LM: DONE
 mkdir -p hyps.lats.lm.words.2
 for id in `seq 1 1700`; do
-fstcompose cseq2wseq/$id.fst lats.lm.word.2/$id.fst | fstshortestpath > hyps.lats.lm.words.2/$id.fst
+#fstcompose cseq2wseq/$id.fst lats.lm.word.1/$id.fst | fstshortestpath > hyps.lats.lm.words.1/$id.fst
+fstcompose hyps.lats.lm.charwords.1/$id.fst lats.lm.word.2/$id.fst  > hyps.lats.lm.words.2/$id.fst
 done
 
 # Generate and score the mixed-case character sequences
@@ -122,5 +140,7 @@ do
 fstdraw --isymbols=$DIR/data/chars.syms --osymbols=$DIR/data/words.syms  ${file}.fst  ${file}.dot
 dot -Tjpg  ${file}.dot >  ${file}.jpg
 done
-fstprint --isymbols=$DIR/data/words.syms --osymbols=$DIR/data/words.syms  ${file3}o.fst
+fstprint --isymbols=$DIR/data/chars.syms --osymbols=$DIR/data/words.syms  hyps.lats.lm.words.1/21.fst
+fstcompose lats.lm.char.2/21.fst cseq2wseq/21.fst  hyps.lats.lm.words.1/21.fst
+
 
