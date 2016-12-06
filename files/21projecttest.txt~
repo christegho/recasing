@@ -1,0 +1,16 @@
+2	4	W	<eps>
+2	5	w	<eps>
+3	6	<eps>	<unk>	1
+4	4	<eps>	<eps>
+4	7	e	<eps>
+5	5	<eps>	<eps>
+5	8	e	<eps>
+6	9	W	<eps>
+6	9	w	<eps>
+7	10	<eps>	We
+7	7	<eps>	<eps>
+8	10	<eps>	we
+8	8	<eps>	<eps>
+9	9	<eps>	<eps>
+9	11	E	<eps>
+9	11	e	<eps>

@@ -35,11 +35,51 @@ $DIR/tools/kaldi/src/lmbin/arpa2fst \
 --read-symbol-table=$DIR/data/chars.syms lm.char.2.arpa - | fstarcsort - > lm.char.2.fst
 fstinfo lm.char.2.fst | head
 
+#3.4  Weighted Transduction from Uncased to Mixed-Case Character Sequences
+#Here we compose the casing WFST toUpper.fst with the character-based language model lm.char.2.fst
+fstdeterminize lm.char.2.fst | fstminimize | fstarcsort | fstcompose toUpper.fst - > toUpper.lm.char.2.fst
+
+#3.5  Generating Recased Hypotheses
+#We can apply the weighted transducer to the original lowercased character string and print the best hypothesis under the language model
+fstcompose $DIR/data/ptb/ptb-dev.input.fsts/21.fst toUpper.lm.char.2.fst |\
+fstproject --project_output | fstshortestpath |\
+printstrings -m $DIR//data/chars.syms -w
+
+#3.5.1  Generating the 1-Best WFSAs
+#We process the entire 1700 sentence dev set in batch mode. The following step generates 1700 WFSAs with the best-scoring mixed case character sequence for each sentence.
+mkdir hyps.lm.char.2
+for id in `seq 1 1700`; do
+	fstcompose $DIR/data/ptb/ptb-dev.input.fsts/${id}.fst toUpper.lm.char.2.fst | fstproject --project_output | fstshortestpath > hyps.lm.char.2/${id}.fst
+done
+
+#3.5.2  Generating Character Sequence Hypotheses
+#printstrings has a --range option that processes WFSAs in succession by replacing the ? symbol in the --input argument by an index in the range. 
+printstrings --range=1:1700 --input=hyps.lm.char.2/?.fst -m $DIR/data/chars.syms \
+--output=hyps.lm.char.2/rawhyps
+# look at the output file, to make sure it's sensible
+awk 'NR==1' hyps.lm.char.2/rawhyps
+
+#3.5.3  Remove the Sentence Start and Sentence End Symbols
+sed 's,<s>,,;s,</s>,,' hyps.lm.char.2/rawhyps > hyps.lm.char.2/chyps
+# look at the output, to make sure it
+awk 'NR==21' hyps.lm.char.2/chyps
+
+#3.5.4  Generating Word Sequence Hypotheses
+sed 's, ,,g;s,_, ,g' hyps.lm.char.2/chyps > hyps.lm.char.2/whyps
+awk 'NR==21' hyps.lm.char.2/whyps
+
+#3.6  Evaluation
+#3.6.1  Performance at the Character Level
+#Score the character output against the character references:
+python $DIR/scripts/eval_recasing.py --test hyps.lm.char.2/chyps \
+--ref $DIR/data/ptb/ptb-dev.chars
 #draw
 for file in toUpper lm.char.2
 do
 fstdraw --isymbols=$DIR/data/chars.syms --osymbols=$DIR/data/chars.syms  ${file}.fst  ${file}.dot
 dot -Tjpg  ${file}.dot >  ${file}.jpg
 done
+
+ fstprint --isymbols=$DIR/data/chars.syms --osymbols=$DIR/data/chars.syms 1.fst
 
 
