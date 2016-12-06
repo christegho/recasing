@@ -1,4 +1,13 @@
 #5 Recasing and Lattice Rescoring
+export HiFST=/home/wjb31/src/hifst/hifst.mlsalt-cpu2.18Oct16/ucam-smt/
+# path to the UCAM HiFST translation binaries
+export PATH=$PATH:$HiFST/bin/
+# path to the OpenFST binaries
+export PATH=$PATH:$HiFST/externals/openfst-1.5.4/INSTALL_DIR/bin/
+
+alias printstrings=printstrings.sta.O2.bin
+
+DIR=/home/wjb31/MLSALT/MLSALT3/practical/recasing
 
 #5.1  Character Lattice Generation Under the Character Bigram Language Model
 mkdir -p lats.lm.char.2
@@ -19,6 +28,9 @@ done
 fstcompose cseq2wseq/21.fst lats.lm.word.1/21.fst |\
 printstrings -w -m $DIR/data/chars.syms  -n 5 -u
 
+#################################################################################
+#Unigram sequences for evaluation
+#################################################################################
 #Batch processing of the dev set follows the procedure for the character-based LM:
 mkdir -p hyps.lats.lm.words.1
 for id in `seq 1 1700`; do
@@ -37,10 +49,61 @@ sed 's, ,,g;s,_, ,g'  hyps.lats.lm.words.1/chyps > hyps.lats.lm.words.1/whyps
 python $DIR/scripts/eval_recasing.py --test hyps.lats.lm.words.1/whyps \
 --ref $DIR/data/ptb/ptb-dev.words
 
+#################################################################################
+# Generate Bigram Word model
+#################################################################################
+$DIR/tools/kenlm/bin/lmplz -o 2 < $DIR/data/train/train.words > lm.word.2.arpa
+head -20 lm.word.2.arpa
+LD_LIBRARY_PATH=$DIR/tools/kaldi/tools/openfst/lib/ \
+$DIR/tools/kaldi/src/lmbin/arpa2fst \
+--read-symbol-table=$DIR/data/words.syms lm.word.2.arpa - |\
+fstarcsort - > lm.word.2.fst
+
+fstinfo lm.word.2.fst | head
+
+mkdir -p lats.lm.word.2
+for id in `seq 1 1700`; do
+fstcompose cseq2wseq/$id.fst lm.word.2.fst | fstproject --project_output |\
+fstrmepsilon | fstdeterminize | fstminimize | fstarcsort > lats.lm.word.2/$id.fst
+done
+
+#Test with 21.fst
+fstcompose cseq2wseq/21.fst lats.lm.word.2/21.fst |\
+printstrings -w -m $DIR/data/words.syms  -n 5 -u -p
+#<s> W e ' R e _ a b o u t _ t o _ s e e _ i f _ a d v e r t i s i n g _ w o r k s . </s> 62.6055
+#<s> W e ' r e _ a b o u t _ t o _ s e e _ i f _ a d v e r t i s i n g _ w o r k s . </s> 64.5996
+#<s> W e ' r E _ a b o u t _ t o _ s e e _ i f _ a d v e r t i s i n g _ w o r k s . </s> 64.5996
+#<s> W e ' R E _ a b o u t _ t o _ s e e _ i f _ a d v e r t i s i n g _ w o r k s . </s> 64.5996
+#<s> W e ' R e _ a b o u t _ t o _ s e e _ i f _ a d v e r t i s i n g _ W o r k s . </s> 64.6738
+#<s> We Re about to see if advertising works </s> 	62.6055
+#<s> We about to see if advertising works </s> 	64.5996
+#<s> We Re about to see if advertising Works </s> 	64.6738
+#<s> We Re about to see if Advertising works </s> 	64.9424
+#<s> we Re about to see if advertising works </s> 	66.4805
+
+#################################################################################
+#Evaluation of 2-gram word model
+#################################################################################
+#Batch processing of the dev set follows the procedure for the character-based LM: DONE
+mkdir -p hyps.lats.lm.words.2
+for id in `seq 1 1700`; do
+fstcompose cseq2wseq/$id.fst lats.lm.word.2/$id.fst | fstshortestpath > hyps.lats.lm.words.2/$id.fst
+done
+
+# Generate and score the mixed-case character sequences
+printstrings --range=1:1700 --input=hyps.lats.lm.words.2/?.fst -m $DIR/data/chars.syms \
+--output=hyps.lats.lm.words.2/rawhyps
+sed 's,<s>,,;s,</s>,,'  hyps.lats.lm.words.2/rawhyps > hyps.lats.lm.words.2/chyps
+python $DIR/scripts/eval_recasing.py --test hyps.lats.lm.words.2/chyps \
+--ref $DIR/data/ptb/ptb-dev.chars
+
+# Generate and score the mixed-case word sequences
+sed 's, ,,g;s,_, ,g'  hyps.lats.lm.words.2/chyps > hyps.lats.lm.words.2/whyps
+python $DIR/scripts/eval_recasing.py --test hyps.lats.lm.words.2/whyps \
+--ref $DIR/data/ptb/ptb-dev.words
 
 
-
-
+#################################################################################
 #testinput
 file=in
 fstcompile --isymbols=$DIR/data/chars.syms --osymbols=$DIR/data/chars.syms  --acceptor  $file.txt $file.fst
