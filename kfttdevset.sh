@@ -77,7 +77,7 @@ for id in `seq 1 1113`; do
 fstcompose kftt.lats.lm.char.2/$id.fst kfttcseq2wseq/$id.fst > kftt.hyps.lats.lm.charwords.1/$id.fst
 fstcompose kftt.hyps.lats.lm.charwords.1/$id.fst kftt.lats.lm.word.1/$id.fst  > kftt.hyps.lats.lm.words.1/$id.fst
 done
-#REDO HERE
+
 # Generate and score the mixed-case character sequences
 printstrings --range=1:1113 --input=kftt.hyps.lats.lm.words.1/?.fst -m $DIR/data/chars.syms \
 --output=kftt.hyps.lats.lm.words.1/rawhyps
@@ -103,11 +103,12 @@ done
 #################################################################################
 #Evaluation of 2-gram char 2-gram word model - Interpolation
 #################################################################################
+#TODO
 #Batch processing of the dev set follows the procedure for the character-based LM: DONE
 mkdir -p kftt.hyps.lats.lm.words.2
 for id in `seq 1 1113`; do
 #fstcompose kfttcseq2wseq/$id.fst lats.lm.word.1/$id.fst | fstshortestpath > kftt.hyps.lats.lm.words.1/$id.fst
-fstcompose kftthyps.lats.lm.charwords.1/$id.fst kftt.lats.lm.word.2/$id.fst  > kftt.hyps.lats.lm.words.2/$id.fst
+fstcompose kftt.hyps.lats.lm.charwords.1/$id.fst kftt.lats.lm.word.2/$id.fst  > kftt.hyps.lats.lm.words.2/$id.fst
 done
 
 # Generate and score the mixed-case character sequences

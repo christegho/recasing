@@ -9,7 +9,7 @@ alias printstrings=printstrings.sta.O2.bin
 
 DIR=/home/wjb31/MLSALT/MLSALT3/practical/recasing
 
-
+########################################################################
 mkdir -p tf.exps/configs ; cd tf.exps
 cp $DIR/configs/* configs/
 
@@ -37,6 +37,7 @@ printstrings -m $DIR/data/chars.syms -n 5 -u -w < tmp.sfst/21.fst
 
 ####################################################################
 #6.2.3 Parallel SGNMT Decoding
+####################################################################
 $DIR/scripts/sgnmt_on_grid_cpu.sh 340 1700 \
 lats.lm.char.2.rnnlm configs/sgnmt.rnnlm_chars.dev.ini
 
@@ -53,3 +54,23 @@ python $DIR/scripts/eval_recasing.py --test lats.lm.char.2.rnnlm/chyps \
 sed 's, ,,g;s,_, ,g' lats.lm.char.2.rnnlm/chyps > lats.lm.char.2.rnnlm/whyps
 python $DIR/scripts/eval_recasing.py --test lats.lm.char.2.rnnlm/whyps \
 --ref $DIR/data/ptb/ptb-dev.words
+
+####################################################################
+#6.2.3 Parallel SGNMT Decoding - evaluating on KFTT
+####################################################################
+$DIR/scripts/sgnmt_on_grid_cpu.sh 340 1113 \
+kftt.lats.lm.char.2.rnnlm configs/sgnmt.rnnlm_chars.dev.ini
+
+#Scoring is done in the usual way:
+# generate raw character hypotheses
+printstrings -m $DIR/data/chars.syms --range=1:1113 \
+--input=kftt.lats.lm.char.2.rnnlm/sfst/?.fst --output=kftt.lats.lm.char.2.rnnlm/rawhyps
+# generate and score character hypotheses
+sed 's,<s>,,;s,</s>,,'  kftt.lats.lm.char.2.rnnlm/rawhyps > kftt.lats.lm.char.2.rnnlm/chyps
+python $DIR/scripts/eval_recasing.py --test kftt.lats.lm.char.2.rnnlm/chyps \
+--ref $DIR/data/kftt/kftt-dev.chars
+
+# generate and score word hypotheses
+sed 's, ,,g;s,_, ,g' kftt.lats.lm.char.2.rnnlm/chyps > kftt.lats.lm.char.2.rnnlm/whyps
+python $DIR/scripts/eval_recasing.py --test kftt.lats.lm.char.2.rnnlm/whyps \
+--ref $DIR/data/kftt/kftt-dev.words
