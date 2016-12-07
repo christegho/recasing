@@ -140,7 +140,7 @@ do
 fstdraw --isymbols=$DIR/data/chars.syms --osymbols=$DIR/data/words.syms  ${file}.fst  ${file}.dot
 dot -Tjpg  ${file}.dot >  ${file}.jpg
 done
-fstprint --isymbols=$DIR/data/chars.syms --osymbols=$DIR/data/words.syms  hyps.lats.lm.words.1/21.fst
+fstprint --isymbols=$DIR/data/words.syms --osymbols=$DIR/data/words.syms  lm.word.1.fst head -5
 fstcompose lats.lm.char.2/21.fst cseq2wseq/21.fst  hyps.lats.lm.words.1/21.fst
 
 
